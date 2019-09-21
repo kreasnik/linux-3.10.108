@@ -2093,6 +2093,30 @@ static irqreturn_t ei_interrupt(int irq, void *dev_id, struct pt_regs * regs)
 	return IRQ_HANDLED;
 }
 
+#if defined(CONFIG_VISTA_PORT_EVENT) /*add by xavier for port event 20190906*/
+#include "vista_port_event.h"
+extern int vista_port_event_send(struct vista_port_event *e);
+#endif
+
+
+
+#if defined(CONFIG_VISTA_PORT_EVENT) /*add by xavier for port event 20190906*/	
+static void raeth_port_notification(int port_no,int status)
+{    
+	struct vista_port_event e;
+
+	memset(&e,0,sizeof(struct vista_port_event));
+	
+	e.port_id = port_no;	
+
+	e.status = status;	
+
+	vista_port_event_send(&e);
+	
+	return;
+}
+#endif
+
 #if defined (CONFIG_RALINK_RT6855) || defined (CONFIG_RALINK_RT6855A) || \
     defined (CONFIG_RALINK_MT7620)|| defined (CONFIG_RALINK_MT7621) || defined(CONFIG_ARCH_MT7623)
 static void esw_link_status_changed(int port_no, void *dev_id)
@@ -2101,6 +2125,9 @@ static void esw_link_status_changed(int port_no, void *dev_id)
     //struct net_device *dev = (struct net_device *) dev_id;
     struct net_device *dev = dev_raether;
     END_DEVICE *ei_local = netdev_priv(dev);
+#if defined(CONFIG_VISTA_PORT_EVENT) /*add by xavier for port event 20190906*/
+	unsigned int link;
+#endif
 
 #if defined (CONFIG_RALINK_RT6855) || defined(CONFIG_RALINK_RT6855A) || \
     defined (CONFIG_RALINK_MT7620)
@@ -2109,6 +2136,9 @@ static void esw_link_status_changed(int port_no, void *dev_id)
     mii_mgr_read(31, (0x3008 + (port_no*0x100)), &reg_val);
 #endif    
     if(reg_val & 0x1) {
+#if defined(CONFIG_VISTA_PORT_EVENT) /*add by xavier for port event 20190906*/	
+	link  = 1;
+#endif
 	printk("ESW: Link Status Changed - Port%d Link UP\n", port_no);
 
 #if defined (CONFIG_WAN_AT_P0)
@@ -2120,10 +2150,18 @@ static void esw_link_status_changed(int port_no, void *dev_id)
 	    schedule_work(&ei_local->kill_sig_wq);
 	}
 #endif
-    } else {	    
+    } else {
+#if defined(CONFIG_VISTA_PORT_EVENT) /*add by xavier for port event 20190906*/
+	link = 0;
+#endif
 	printk("ESW: Link Status Changed - Port%d Link Down\n", port_no);
 
     }
+
+#if defined(CONFIG_VISTA_PORT_EVENT) /*add by xavier for port event 20190906*/	
+	raeth_port_notification(port_no,link);
+#endif
+
 }
 #endif
 
